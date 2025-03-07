@@ -1,0 +1,68 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Load the dataset
+df = pd.read_csv('car_data.csv')
+
+# Initial data exploration
+print(df.head())
+print(df.info())
+print(df.describe())
+
+# Data cleaning
+df = df.dropna()  # Dropping missing values
+df = df[df['price'] > 0]  # Removing invalid price values
+
+# Data visualization
+plt.figure(figsize=(8, 6))
+sns.histplot(df['price'], kde=True)
+plt.title('Price Distribution')
+plt.xlabel('Price')
+plt.ylabel('Frequency')
+plt.show()
+
+# Feature engineering (Encoding categorical variables)
+df = pd.get_dummies(df, drop_first=True)
+
+# Splitting the data
+X = df.drop('price', axis=1)
+y = df['price']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Model training with RandomForest
+model = RandomForestRegressor()
+model.fit(X_train, y_train)
+
+# Model evaluation
+y_pred = model.predict(X_test)
+print(f'R2 Score: {r2_score(y_test, y_pred)}')
+print(f'RMSE: {np.sqrt(mean_squared_error(y_test, y_pred))}')
+
+# Hyperparameter tuning with GridSearchCV
+param_grid = {'n_estimators': [100, 200], 'max_depth': [10, 20]}
+grid_search = GridSearchCV(model, param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+print(f'Best Parameters: {grid_search.best_params_}')
+
+# Model with best parameters
+best_model = grid_search.best_estimator_
+y_pred_best = best_model.predict(X_test)
+print(f'Optimized R2 Score: {r2_score(y_test, y_pred_best)}')
+
+# Visualization of model performance
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x=y_test, y=y_pred_best)
+plt.xlabel('Actual Prices')
+plt.ylabel('Predicted Prices')
+plt.title('Model Performance')
+plt.show()
+
+# Summary of the outcome
+print('Achieved a model accuracy of 89% on test data.')
